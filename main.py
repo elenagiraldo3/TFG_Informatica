@@ -14,10 +14,10 @@ from matplotlib import pyplot as plt
 from PIL import Image
 # from IPython.display import display
 
-from object_detection.utils import ops as utils_ops
+from object_detection.utils import ops as utils_ops, np_box_list_ops
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
-
+from object_detection.utils import np_box_list
 # patch tf1 into `utils.ops`
 utils_ops.tf = tf.compat.v1
 
@@ -82,6 +82,20 @@ def show_inference(model, image_path):
     image_np = np.array(Image.open(image_path))
     # Actual detection.
     output_dict = run_inference_for_single_image(model, image_np)
+    # x_min, y_min, x_max, y_max
+    width = 1200
+    height = 800
+    threshold = 0.5
+    print("Imagen ", i)
+    for k, j, l in zip(output_dict['detection_boxes'],
+                       output_dict['detection_classes'],
+                       output_dict['detection_scores']):
+        if l > threshold:
+            if j in [3, 6, 8]:
+
+                print("Caja")
+                print(k[1] * width, k[0] * height, k[3] * width, k[2] * height)
+
     # Visualization of the results of a detection.
     vis_util.visualize_boxes_and_labels_on_image_array(
         image_np,
