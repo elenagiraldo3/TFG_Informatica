@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
 # from IPython.display import display
 
-from object_detection.utils import ops as utils_ops, np_box_list_ops
+from object_detection.utils import ops as utils_ops, np_box_list_ops, np_box_ops
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 from object_detection.utils import np_box_list
@@ -87,14 +87,13 @@ def show_inference(model, image_path):
     height = 800
     threshold = 0.5
     print("Imagen ", i)
+    cajas = []
     for k, j, l in zip(output_dict['detection_boxes'],
                        output_dict['detection_classes'],
                        output_dict['detection_scores']):
         if l > threshold:
             if j in [3, 6, 8]:
-
-                print("Caja")
-                print(k[1] * width, k[0] * height, k[3] * width, k[2] * height)
+                cajas.append(np.array([k[1] * width, k[0] * height, k[3] * width, k[2] * height], ndim=1))
 
     # Visualization of the results of a detection.
     vis_util.visualize_boxes_and_labels_on_image_array(
@@ -111,7 +110,7 @@ def show_inference(model, image_path):
     plt.figure(figsize=IMAGE_SIZE)
     plt.imshow(image_np)
     plt.savefig("outputs/detection_output{}.png".format(i))
-
+    return cajas
 
 # ################# Main Program ##################
 # List of the strings that is used to add correct label for each box.
@@ -130,6 +129,23 @@ detection_model = load_model(MODEL_NAME)
 
 # Box outputs
 i = 1
+
 for image_path in TEST_IMAGE_PATHS:
-    show_inference(detection_model, image_path)
+    cajas = show_inference(detection_model, image_path)
     i = i + 1
+    # Deteccion de huecos
+    cajas.sort(key=lambda y: y[0])
+    # TODO: Si solo hay un vehiculo
+    # Si hay mas de un vehiculo
+    for x in range(0, len(cajas)-1):
+        print(cajas[x])
+        print(cajas[x].shape)
+        prueba = np_box_ops.intersection(cajas[x], cajas[x + 1])
+        print(prueba)
+
+
+
+
+
+
+
