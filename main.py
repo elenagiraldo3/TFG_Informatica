@@ -83,9 +83,6 @@ def show_inference(model, image_path):
     # Actual detection.
     output_dict = run_inference_for_single_image(model, image_np)
     # x_min, y_min, x_max, y_max
-    width = 1200
-    height = 800
-    threshold = 0.5
     print("Imagen ", i)
     cajas = []
     for k, j, l in zip(output_dict['detection_boxes'],
@@ -93,7 +90,7 @@ def show_inference(model, image_path):
                        output_dict['detection_scores']):
         if l > threshold:
             if j in [3, 6, 8]:
-                cajas.append(np.array([k[1] * width, k[0] * height, k[3] * width, k[2] * height], ndim=1))
+                cajas.append([k[1] * width, k[0] * height, k[3] * width, k[2] * height])
 
     # Visualization of the results of a detection.
     vis_util.visualize_boxes_and_labels_on_image_array(
@@ -122,6 +119,9 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 PATH_TO_TEST_IMAGES_DIR = pathlib.Path('images')
 TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
 IMAGE_SIZE = (12, 8)
+width = 1200
+height = 800
+threshold = 0.5
 
 # Detection model
 MODEL_NAME = 'efficientdet_d0_coco17_tpu-32'
@@ -135,15 +135,18 @@ for image_path in TEST_IMAGE_PATHS:
     i = i + 1
     # Deteccion de huecos
     cajas.sort(key=lambda y: y[0])
-    # TODO: Si solo hay un vehiculo
-    # Si hay mas de un vehiculo
-    for x in range(0, len(cajas)-1):
-        print(cajas[x])
-        print(cajas[x].shape)
-        prueba = np_box_ops.intersection(cajas[x], cajas[x + 1])
-        print(prueba)
+    # Si solo hay un vehiculo
+    huecos = [] # x_min, x_max
+    if cajas[0][0] > 0:
+        huecos.append([0, cajas[0][0]])
+    for x in range(0, len(cajas) - 1):
+        if cajas[x][2] < cajas[x + 1][0]:
+            huecos.append([cajas[x][2], cajas[x + 1][0]])
+    if cajas[len(cajas)-1][2] < width:
+        huecos.append([cajas[len(cajas)-1][2], width])
 
-
+    print("Huecos:")
+    print(huecos)
 
 
 
