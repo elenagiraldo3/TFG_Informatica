@@ -11,13 +11,14 @@ import tensorflow as tf
 # from collections import defaultdict
 # from io import StringIO
 from matplotlib import pyplot as plt
-from PIL import Image
+from PIL import Image, ImageDraw
 # from IPython.display import display
 
 from object_detection.utils import ops as utils_ops, np_box_list_ops, np_box_ops
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
 from object_detection.utils import np_box_list
+
 # patch tf1 into `utils.ops`
 utils_ops.tf = tf.compat.v1
 
@@ -83,7 +84,6 @@ def show_inference(model, image_path):
     # Actual detection.
     output_dict = run_inference_for_single_image(model, image_np)
     # x_min, y_min, x_max, y_max
-    print("Imagen ", i)
     cajas = []
     for k, j, l in zip(output_dict['detection_boxes'],
                        output_dict['detection_classes'],
@@ -109,6 +109,7 @@ def show_inference(model, image_path):
     plt.savefig("outputs/detection_output{}.png".format(i))
     return cajas
 
+
 # ################# Main Program ##################
 # List of the strings that is used to add correct label for each box.
 PATH_TO_LABELS = 'mscoco_label_map.pbtxt'
@@ -131,24 +132,48 @@ detection_model = load_model(MODEL_NAME)
 i = 1
 
 for image_path in TEST_IMAGE_PATHS:
+    print("Imagen ", i)
     cajas = show_inference(detection_model, image_path)
-    i = i + 1
     # Deteccion de huecos
     cajas.sort(key=lambda y: y[0])
-    # Si solo hay un vehiculo
-    huecos = [] # x_min, x_max
-    if cajas[0][0] > 0:
-        huecos.append([0, cajas[0][0]])
-    for x in range(0, len(cajas) - 1):
-        if cajas[x][2] < cajas[x + 1][0]:
-            huecos.append([cajas[x][2], cajas[x + 1][0]])
-    if cajas[len(cajas)-1][2] < width:
-        huecos.append([cajas[len(cajas)-1][2], width])
+    solucion = []
+    im = Image.open("outputs/detection_output{}.png".format(i))
+    draw = ImageDraw.Draw(im)
+    line_color = (0, 0, 255)  # Azul
+    # Si no  hay vehículos, hay hueco seguro!
+    if len(cajas) == 0:
+        solucion.append([0, width])
+        draw.line([(200, 400), (width, 400)], fill=line_color, width=3)
+    else:
+        # Si solo hay un vehiculo
+        huecos = []  # x_min, x_max, long coche1, long coche2
+        if cajas[0][0] > 0:
+            huecos.append([0, cajas[0][0], cajas[0][2] - cajas[0][0]])
+        for x in range(0, len(cajas) - 1):
+            if cajas[x][2] < cajas[x + 1][0]:
+                huecos.append(
+                    [cajas[x][2], cajas[x + 1][0], cajas[x][2] - cajas[x][0], cajas[x + 1][2] - cajas[x + 1][0]])
+        if cajas[len(cajas) - 1][2] < width:
+            huecos.append([cajas[len(cajas) - 1][2], width, cajas[len(cajas) - 1][2] - cajas[len(cajas) - 1][0]])
+        # Vemos cuáles de esos huecos son válidos
+        for x in range(0, len(huecos)):
+            size_hueco = huecos[x][1] - huecos[x][0]
+            if len(huecos[x]) == 3:
+                if huecos[x][0] == 0:
+                    if size_hueco >= (huecos[x][2] / 3):
+                        solucion.append([huecos[x][0], huecos[x][1]])
+                        draw.line([(200, 400), (huecos[x][1], 400)], fill=line_color, width=3)
+                elif huecos[x][1] == width:
+                    if size_hueco >= (5 / 3) * huecos[x][2]:
+                        solucion.append([huecos[x][0], huecos[x][1]])
+                        draw.line([(huecos[x][0], 400), (width, 400)], fill=line_color, width=3)
+            else:
+                if size_hueco >= (huecos[x][2] + huecos[x][3]) / 6:
+                    solucion.append([huecos[x][0], huecos[x][1]])
+                    draw.line([(huecos[x][0], 400), (huecos[x][1], 400)], fill=line_color, width=3)
 
-    print("Huecos:")
-    print(huecos)
-
-
-
-
-
+    im.save("outputs/detection_output_hueco{}.png".format(i))
+    i = i + 1
+    print("Nº Huecos: ", len(solucion))
+    if len(solucion) > 0:
+        print(solucion)
