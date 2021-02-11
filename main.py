@@ -104,9 +104,9 @@ def show_inference(model, image_path):
         line_thickness=8)
 
     # display(Image.fromarray(image_np))
-    plt.figure(figsize=IMAGE_SIZE)
-    plt.imshow(image_np)
-    plt.savefig("outputs/detection_output{}.png".format(i))
+    # plt.figure(figsize=IMAGE_SIZE)
+    # plt.imshow(image_np)
+    # plt.savefig("outputs/detection_output{}.png".format(i))
     return cajas
 
 
@@ -119,40 +119,48 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 # If you want to test the code with your images, just add path of the images to the TEST_IMAGE_PATHS.
 PATH_TO_TEST_IMAGES_DIR = pathlib.Path('images')
 TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
-IMAGE_SIZE = (12, 8)
-width = 1200
-height = 800
-threshold = 0.5
+# IMAGE_SIZE = (12, 8)
+
 
 # Detection model
 MODEL_NAME = 'efficientdet_d0_coco17_tpu-32'
 detection_model = load_model(MODEL_NAME)
-
+threshold = 0.5
 # Box outputs
 i = 1
 
 for image_path in TEST_IMAGE_PATHS:
+    im = Image.open(image_path)
+    width, height = im.size
+    draw = ImageDraw.Draw(im)
+    car_color = (0, 0, 255)  # Azul
+    hueco_color = (255, 0, 0) # Rojo
+
+
     print("Imagen ", i)
     cajas = show_inference(detection_model, image_path)
     # Deteccion de huecos
     cajas.sort(key=lambda y: y[0])
     solucion = []
-    im = Image.open("outputs/detection_output{}.png".format(i))
-    draw = ImageDraw.Draw(im)
-    line_color = (0, 0, 255)  # Azul
+
     # Si no  hay vehículos, hay hueco seguro!
     if len(cajas) == 0:
         solucion.append([0, width])
-        draw.line([(200, 400), (width, 400)], fill=line_color, width=3)
+        draw.line([(0, height/2), (width, height/2)], fill=hueco_color, width=5)
     else:
         # Si solo hay un vehiculo
         huecos = []  # x_min, x_max, long coche1, long coche2
         if cajas[0][0] > 0:
             huecos.append([0, cajas[0][0], cajas[0][2] - cajas[0][0]])
         for x in range(0, len(cajas) - 1):
+            x_min, y_min, x_max, y_max = cajas[x]
+            draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color, width=3)
             if cajas[x][2] < cajas[x + 1][0]:
                 huecos.append(
                     [cajas[x][2], cajas[x + 1][0], cajas[x][2] - cajas[x][0], cajas[x + 1][2] - cajas[x + 1][0]])
+        x_min, y_min, x_max, y_max = cajas[len(cajas)-1]
+        draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
+                  width=3)
         if cajas[len(cajas) - 1][2] < width:
             huecos.append([cajas[len(cajas) - 1][2], width, cajas[len(cajas) - 1][2] - cajas[len(cajas) - 1][0]])
         # Vemos cuáles de esos huecos son válidos
@@ -162,17 +170,17 @@ for image_path in TEST_IMAGE_PATHS:
                 if huecos[x][0] == 0:
                     if size_hueco >= (huecos[x][2] / 3):
                         solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(200, 400), (huecos[x][1], 400)], fill=line_color, width=3)
+                        draw.line([(0, height/2), (huecos[x][1], height/2)], fill=hueco_color, width=3)
                 elif huecos[x][1] == width:
                     if size_hueco >= (5 / 3) * huecos[x][2]:
                         solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(huecos[x][0], 400), (width, 400)], fill=line_color, width=3)
+                        draw.line([(huecos[x][0], height/2), (width, height/2)], fill=hueco_color, width=3)
             else:
                 if size_hueco >= (huecos[x][2] + huecos[x][3]) / 6:
                     solucion.append([huecos[x][0], huecos[x][1]])
-                    draw.line([(huecos[x][0], 400), (huecos[x][1], 400)], fill=line_color, width=3)
+                    draw.line([(huecos[x][0], height/2), (huecos[x][1], height/2)], fill=hueco_color, width=3)
 
-    im.save("outputs/detection_output_hueco{}.png".format(i))
+    im.save("outputs/detection_output{}.png".format(i))
     i = i + 1
     print("Nº Huecos: ", len(solucion))
     if len(solucion) > 0:
