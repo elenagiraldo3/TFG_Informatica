@@ -10,14 +10,15 @@ import tensorflow as tf
 
 # from collections import defaultdict
 # from io import StringIO
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 from PIL import Image, ImageDraw
 # from IPython.display import display
 
-from object_detection.utils import ops as utils_ops, np_box_list_ops, np_box_ops
+from object_detection.utils import ops as utils_ops
+# from object_detection.utils import np_box_list_ops, np_box_ops
 from object_detection.utils import label_map_util
-from object_detection.utils import visualization_utils as vis_util
-from object_detection.utils import np_box_list
+# from object_detection.utils import visualization_utils as vis_util
+# from object_detection.utils import np_box_list
 
 # patch tf1 into `utils.ops`
 utils_ops.tf = tf.compat.v1
@@ -77,23 +78,23 @@ def run_inference_for_single_image(model, image):
     return output_dict
 
 
-def show_inference(model, image_path):
+def show_inference(model, path_image):
     # the array based representation of the image will be used later in order to prepare the
     # result image with boxes and labels on it.
-    image_np = np.array(Image.open(image_path))
+    image_np = np.array(Image.open(path_image))
     # Actual detection.
     output_dict = run_inference_for_single_image(model, image_np)
     # x_min, y_min, x_max, y_max
-    cajas = []
+    cajas_filter = []
     for k, j, l in zip(output_dict['detection_boxes'],
                        output_dict['detection_classes'],
                        output_dict['detection_scores']):
         if l > threshold:
             if j in [3, 6, 8]:
-                cajas.append([k[1] * width, k[0] * height, k[3] * width, k[2] * height])
+                cajas_filter.append([k[1] * width, k[0] * height, k[3] * width, k[2] * height])
 
     # Visualization of the results of a detection.
-    vis_util.visualize_boxes_and_labels_on_image_array(
+    """vis_util.visualize_boxes_and_labels_on_image_array(
         image_np,
         output_dict['detection_boxes'],
         output_dict['detection_classes'],
@@ -101,13 +102,13 @@ def show_inference(model, image_path):
         category_index,
         instance_masks=output_dict.get('detection_masks_reframed', None),
         use_normalized_coordinates=True,
-        line_thickness=8)
+        line_thickness=8)"""
 
     # display(Image.fromarray(image_np))
     # plt.figure(figsize=IMAGE_SIZE)
     # plt.imshow(image_np)
     # plt.savefig("outputs/detection_output{}.png".format(i))
-    return cajas
+    return cajas_filter
 
 
 # ################# Main Program ##################
@@ -134,8 +135,7 @@ for image_path in TEST_IMAGE_PATHS:
     width, height = im.size
     draw = ImageDraw.Draw(im)
     car_color = (0, 0, 255)  # Azul
-    hueco_color = (255, 0, 0) # Rojo
-
+    hueco_color = (255, 0, 0)  # Rojo
 
     print("Imagen ", i)
     cajas = show_inference(detection_model, image_path)
@@ -146,7 +146,7 @@ for image_path in TEST_IMAGE_PATHS:
     # Si no  hay vehículos, hay hueco seguro!
     if len(cajas) == 0:
         solucion.append([0, width])
-        draw.line([(0, height/2), (width, height/2)], fill=hueco_color, width=5)
+        draw.line([(0, height / 2), (width, height / 2)], fill=hueco_color, width=5)
     else:
         # Si solo hay un vehiculo
         huecos = []  # x_min, x_max, long coche1, long coche2
@@ -154,11 +154,12 @@ for image_path in TEST_IMAGE_PATHS:
             huecos.append([0, cajas[0][0], cajas[0][2] - cajas[0][0]])
         for x in range(0, len(cajas) - 1):
             x_min, y_min, x_max, y_max = cajas[x]
-            draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color, width=3)
+            draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
+                      width=3)
             if cajas[x][2] < cajas[x + 1][0]:
                 huecos.append(
                     [cajas[x][2], cajas[x + 1][0], cajas[x][2] - cajas[x][0], cajas[x + 1][2] - cajas[x + 1][0]])
-        x_min, y_min, x_max, y_max = cajas[len(cajas)-1]
+        x_min, y_min, x_max, y_max = cajas[len(cajas) - 1]
         draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
                   width=3)
         if cajas[len(cajas) - 1][2] < width:
@@ -170,15 +171,15 @@ for image_path in TEST_IMAGE_PATHS:
                 if huecos[x][0] == 0:
                     if size_hueco >= (huecos[x][2] / 3):
                         solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(0, height/2), (huecos[x][1], height/2)], fill=hueco_color, width=3)
+                        draw.line([(0, height / 2), (huecos[x][1], height / 2)], fill=hueco_color, width=3)
                 elif huecos[x][1] == width:
                     if size_hueco >= (5 / 3) * huecos[x][2]:
                         solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(huecos[x][0], height/2), (width, height/2)], fill=hueco_color, width=3)
+                        draw.line([(huecos[x][0], height / 2), (width, height / 2)], fill=hueco_color, width=3)
             else:
                 if size_hueco >= (huecos[x][2] + huecos[x][3]) / 6:
                     solucion.append([huecos[x][0], huecos[x][1]])
-                    draw.line([(huecos[x][0], height/2), (huecos[x][1], height/2)], fill=hueco_color, width=3)
+                    draw.line([(huecos[x][0], height / 2), (huecos[x][1], height / 2)], fill=hueco_color, width=3)
 
     im.save("outputs/detection_output{}.png".format(i))
     i = i + 1
