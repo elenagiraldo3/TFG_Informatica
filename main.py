@@ -85,30 +85,15 @@ def show_inference(model, path_image):
     # Actual detection.
     output_dict = run_inference_for_single_image(model, image_np)
     # x_min, y_min, x_max, y_max
-    cajas_filter = []
+    box_filter = []
     for k, j, l in zip(output_dict['detection_boxes'],
                        output_dict['detection_classes'],
                        output_dict['detection_scores']):
         if l > threshold:
             if j in [3, 6, 8]:
-                cajas_filter.append([k[1] * width, k[0] * height, k[3] * width, k[2] * height])
+                box_filter.append([k[1] * width, k[0] * height, k[3] * width, k[2] * height])
 
-    # Visualization of the results of a detection.
-    """vis_util.visualize_boxes_and_labels_on_image_array(
-        image_np,
-        output_dict['detection_boxes'],
-        output_dict['detection_classes'],
-        output_dict['detection_scores'],
-        category_index,
-        instance_masks=output_dict.get('detection_masks_reframed', None),
-        use_normalized_coordinates=True,
-        line_thickness=8)"""
-
-    # display(Image.fromarray(image_np))
-    # plt.figure(figsize=IMAGE_SIZE)
-    # plt.imshow(image_np)
-    # plt.savefig("outputs/detection_output{}.png".format(i))
-    return cajas_filter
+    return box_filter
 
 
 # ################# Main Program ##################
@@ -120,7 +105,6 @@ category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABE
 # If you want to test the code with your images, just add path of the images to the TEST_IMAGE_PATHS.
 PATH_TO_TEST_IMAGES_DIR = pathlib.Path('images')
 TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
-# IMAGE_SIZE = (12, 8)
 
 
 # Detection model
@@ -134,55 +118,52 @@ for image_path in TEST_IMAGE_PATHS:
     im = Image.open(image_path)
     width, height = im.size
     draw = ImageDraw.Draw(im)
-    car_color = (0, 0, 255)  # Azul
-    hueco_color = (255, 0, 0)  # Rojo
+    car_color = (0, 0, 255)  # Blue
+    gap_color = (255, 0, 0)  # Red
 
-    print("Imagen ", i)
-    cajas = show_inference(detection_model, image_path)
-    # Deteccion de huecos
-    cajas.sort(key=lambda y: y[0])
-    solucion = []
+    print("Image ", i)
+    boxes = show_inference(detection_model, image_path)
 
-    # Si no  hay vehículos, hay hueco seguro!
-    if len(cajas) == 0:
-        solucion.append([0, width])
-        draw.line([(0, height / 2), (width, height / 2)], fill=hueco_color, width=5)
+    # Gap detection
+    boxes.sort(key=lambda y: y[0])
+    solution = []
+
+    # If there is no vehicle, there is a gap
+    if len(boxes) == 0:
+        solution.append([0, width])
+        draw.line([(0, height / 2), (width, height / 2)], fill=gap_color, width=5)
     else:
-        # Si solo hay un vehiculo
-        huecos = []  # x_min, x_max, long coche1, long coche2
-        if cajas[0][0] > 0:
-            huecos.append([0, cajas[0][0], cajas[0][2] - cajas[0][0]])
-        for x in range(0, len(cajas) - 1):
-            x_min, y_min, x_max, y_max = cajas[x]
+        gaps = []  # x_min, x_max, long car1, long car2
+        if boxes[0][0] > 0:
+            gaps.append([0, boxes[0][0], boxes[0][2] - boxes[0][0]])
+        for x in range(0, len(boxes) - 1):
+            x_min, y_min, x_max, y_max = boxes[x]
             draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
                       width=3)
-            if cajas[x][2] < cajas[x + 1][0]:
-                huecos.append(
-                    [cajas[x][2], cajas[x + 1][0], cajas[x][2] - cajas[x][0], cajas[x + 1][2] - cajas[x + 1][0]])
-        x_min, y_min, x_max, y_max = cajas[len(cajas) - 1]
+            if boxes[x][2] < boxes[x + 1][0]:
+                gaps.append(
+                    [boxes[x][2], boxes[x + 1][0], boxes[x][2] - boxes[x][0], boxes[x + 1][2] - boxes[x + 1][0]])
+        x_min, y_min, x_max, y_max = boxes[len(boxes) - 1]
         draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
                   width=3)
-        if cajas[len(cajas) - 1][2] < width:
-            huecos.append([cajas[len(cajas) - 1][2], width, cajas[len(cajas) - 1][2] - cajas[len(cajas) - 1][0]])
-        # Vemos cuáles de esos huecos son válidos
-        for x in range(0, len(huecos)):
-            size_hueco = huecos[x][1] - huecos[x][0]
-            if len(huecos[x]) == 3:
-                if huecos[x][0] == 0:
-                    if size_hueco >= (huecos[x][2] / 3):
-                        solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(0, height / 2), (huecos[x][1], height / 2)], fill=hueco_color, width=3)
-                elif huecos[x][1] == width:
-                    if size_hueco >= (5 / 3) * huecos[x][2]:
-                        solucion.append([huecos[x][0], huecos[x][1]])
-                        draw.line([(huecos[x][0], height / 2), (width, height / 2)], fill=hueco_color, width=3)
+        if boxes[len(boxes) - 1][2] < width:
+            gaps.append([boxes[len(boxes) - 1][2], width, boxes[len(boxes) - 1][2] - boxes[len(boxes) - 1][0]])
+        # Filter only valid gaps
+        for x in range(0, len(gaps)):
+            gap_size = gaps[x][1] - gaps[x][0]
+            if len(gaps[x]) == 3:
+                if gaps[x][0] == 0:
+                    if gap_size >= (gaps[x][2] / 3):
+                        solution.append([gaps[x][0], gaps[x][1]])
+                        draw.line([(0, height / 2), (gaps[x][1], height / 2)], fill=gap_color, width=3)
+                elif gaps[x][1] == width:
+                    if gap_size >= (5 / 3) * gaps[x][2]:
+                        solution.append([gaps[x][0], gaps[x][1]])
+                        draw.line([(gaps[x][0], height / 2), (width, height / 2)], fill=gap_color, width=3)
             else:
-                if size_hueco >= (huecos[x][2] + huecos[x][3]) / 6:
-                    solucion.append([huecos[x][0], huecos[x][1]])
-                    draw.line([(huecos[x][0], height / 2), (huecos[x][1], height / 2)], fill=hueco_color, width=3)
+                if gap_size >= (gaps[x][2] + gaps[x][3]) / 6:
+                    solution.append([gaps[x][0], gaps[x][1]])
+                    draw.line([(gaps[x][0], height / 2), (gaps[x][1], height / 2)], fill=gap_color, width=3)
 
     im.save("outputs/detection_output{}.png".format(i))
     i = i + 1
-    print("Nº Huecos: ", len(solucion))
-    if len(solucion) > 0:
-        print(solucion)
