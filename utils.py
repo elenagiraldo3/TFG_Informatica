@@ -82,7 +82,7 @@ def filter_vehicles(output_dict, width, height, threshold):
     return boxes
 
 
-def gap_detection(boxes, height, width, draw, car_color):
+def gap_detection(boxes, width, draw, car_color):
     gaps = list()
     # If there is no vehicle, there is a gap
     if not boxes:
@@ -96,7 +96,7 @@ def gap_detection(boxes, height, width, draw, car_color):
             draw.line(
                 [(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)],
                 fill=car_color,
-                width=3
+                width=5
             )
             if boxes[x][2] < boxes[x + 1][0]:
                 gaps.append(
@@ -104,7 +104,7 @@ def gap_detection(boxes, height, width, draw, car_color):
                 )
         x_min, y_min, x_max, y_max = boxes[len(boxes) - 1]
         draw.line([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max), (x_min, y_min)], fill=car_color,
-                  width=3)
+                  width=5)
         if boxes[len(boxes) - 1][2] < width:
             gaps.append([boxes[len(boxes) - 1][2], width, boxes[len(boxes) - 1][2] - boxes[len(boxes) - 1][0]])
     return gaps
@@ -115,19 +115,19 @@ def valid_gaps(gaps, height, width, draw, gap_color):
     for gap in range(0, len(gaps)):
         gap_size = gaps[gap][1] - gaps[gap][0]
         if len(gaps[gap]) == 2:
-            draw.line([(0, height / 2), (width, height / 2)], fill=gap_color, width=3)
+            draw.line([(0, height / 2), (width, height / 2)], fill=gap_color, width=5)
             solution.append([gaps[gap][0], gaps[gap][1]])
         elif len(gaps[gap]) == 3:
             if gaps[gap][0] == 0:
                 if gap_size >= (gaps[gap][2] / 3):
                     solution.append([gaps[gap][0], gaps[gap][1]])
-                    draw.line([(0, height / 2), (gaps[gap][1], height / 2)], fill=gap_color, width=3)
+                    draw.line([(0, height / 2), (gaps[gap][1], height / 2)], fill=gap_color, width=5)
             elif gaps[gap][1] == width:
                 if gap_size >= (5 / 3) * gaps[gap][2]:
                     solution.append([gaps[gap][0], gaps[gap][1]])
-                    draw.line([(gaps[gap][0], height / 2), (width, height / 2)], fill=gap_color, width=3)
+                    draw.line([(gaps[gap][0], height / 2), (width, height / 2)], fill=gap_color, width=5)
         else:
             if gap_size >= (gaps[gap][2] + gaps[gap][3]) / 6:
                 solution.append([gaps[gap][0], gaps[gap][1]])
-                draw.line([(gaps[gap][0], height / 2), (gaps[gap][1], height / 2)], fill=gap_color, width=3)
+                draw.line([(gaps[gap][0], height / 2), (gaps[gap][1], height / 2)], fill=gap_color, width=5)
     return solution

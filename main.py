@@ -29,12 +29,14 @@ if __name__ == "__main__":
     TEST_IMAGE_PATHS = sorted(list(PATH_TO_TEST_IMAGES_DIR.glob("*.jpg")))
 
     threshold = 0.5
+    cont_vehicles = 0
+    cont_gaps = 0
     for i, image_path in enumerate(TEST_IMAGE_PATHS):
         im = Image.open(image_path)
         width, height = im.size
         draw = ImageDraw.Draw(im)
-        car_color = (0, 0, 255)  # Blue
-        gap_color = (255, 0, 0)  # Red
+        car_color = (0, 255, 255)  # Yellow
+        gap_color = (248, 0, 0)  # Red
 
         # 3. Object detection
         objects = show_inference(detection_model, image_path)
@@ -46,11 +48,11 @@ if __name__ == "__main__":
             height=height,
             threshold=threshold
         )
+        cont_vehicles += len(boxes)
 
         # 5. Gap detection
         gaps = gap_detection(
             boxes=boxes,
-            height=height,
             width=width,
             draw=draw,
             car_color=car_color
@@ -64,12 +66,14 @@ if __name__ == "__main__":
             draw=draw,
             gap_color=gap_color
         )
+        cont_gaps += len(solution)
 
         # 7. Output image
         string_path = os.path.basename(image_path)
-        print(string_path)
-        print(f"Image {i}")
+        print(f"Image: {string_path}")
+        print(f"Number of vehicles: {len(boxes)}")
         print(f"Number of gaps: {len(solution)}")
-        for n in range(1, len(solution) + 1):
-            print(f"Gap {n}: {solution[n - 1]}")
         im.save(f"outputs/{string_path}")
+
+    print(f"Number of totals vehicles: {cont_vehicles}")
+    print(f"Number of totals gaps: {cont_gaps}")
