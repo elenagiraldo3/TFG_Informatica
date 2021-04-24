@@ -1,6 +1,6 @@
 import os
 import pathlib
-
+import time
 import tensorflow as tf
 from PIL import Image, ImageDraw
 from object_detection.utils import label_map_util
@@ -15,12 +15,15 @@ utils_ops.tf = tf.compat.v1
 tf.gfile = tf.io.gfile
 
 if __name__ == "__main__":
+    start_time = time.time()
     # List of the strings that is used to add correct label for each box.
     PATH_TO_LABELS = 'mscoco_label_map.pbtxt'
     category_index = label_map_util.create_category_index_from_labelmap(PATH_TO_LABELS, use_display_name=True)
 
     # 1. Detection model
     MODEL_NAME = 'efficientdet_d0_coco17_tpu-32'
+    # MODEL_NAME = 'ssd_mobilenet_v2_320x320_coco17_tpu-8'
+    # MODEL_NAME = 'efficientdet_d7_coco17_tpu-32'
     detection_model = load_model(MODEL_NAME)
 
     # 2. Input of images
@@ -77,3 +80,4 @@ if __name__ == "__main__":
 
     print(f"Number of totals vehicles: {cont_vehicles}")
     print(f"Number of totals gaps: {cont_gaps}")
+    print("--- %s seconds ---" % (time.time() - start_time))

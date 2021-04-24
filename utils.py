@@ -8,6 +8,9 @@ from object_detection.utils import ops as utils_ops
 
 # Methods
 def load_model(model_name):
+    # This url may change in the future
+    # Go to https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/tf2_detection_zoo.md
+    # for further information
     base_url = 'http://download.tensorflow.org/models/object_detection/tf2/20200711/'
     model_file = model_name + '.tar.gz'
     model_dir = tf.keras.utils.get_file(
