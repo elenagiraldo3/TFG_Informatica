@@ -102,4 +102,4 @@ if __name__ == "__main__":
 
     print(f"Number of totals vehicles: {cont_vehicles}")
     print(f"Number of totals gaps: {cont_gaps}")
-    print("--- %s seconds ---" % (time.time() - start_time))
+    print(f"Total time: {(time.time() - start_time)}")
