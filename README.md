@@ -3,7 +3,7 @@ Repositorio de mi TFG en Ingeniería Informática
 
 TFG centrado en la detección de huecos de aparcamiento.
 
-Para probar tus propias imágenes, borra las imágenes de la carpeta images e incluye las tuyas. El formato de imagen debe ser .jpg, o cambiar en main.py la línea 29.
+Para probar tus propias imágenes, borra las imágenes de la carpeta images e incluye las tuyas. El formato de imagen debe ser .jpg, o cambiar en main.py la línea 32.
 
 Para cambiar el modelo de detección, se debe indicar en la línea 23.
 
